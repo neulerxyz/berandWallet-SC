@@ -3,7 +3,6 @@ const { ethers } = require("ethers");
 async function checkContractCode() {
     const provider = new ethers.JsonRpcProvider("https://bartio.rpc.berachain.com");
     const contractAddress = "0x8C9ADa27E05199ADeD706711e5f79b8C3ca7cc04"; // Replace with your contract address
-
     // Fetch the code at the contract address
     const code = await provider.getCode(contractAddress);
 

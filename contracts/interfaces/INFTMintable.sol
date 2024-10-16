@@ -2,5 +2,5 @@
 pragma solidity ^0.8.24;
 
 interface INFTMintable {
-    function mintNFT(address to) external;
+    function mintWish(string memory secretMessage) external;
 }

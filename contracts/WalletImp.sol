@@ -20,6 +20,7 @@ contract WalletImp is Initializable, OwnableUpgradeable, IWalletImp {
     event RewardAddressUpdated(address indexed newRewardAddress);
     event RewardsClaimed(address indexed rewardAddress, uint256 amount);
     event ExecutedTransaction(address indexed target, uint256 value, bytes data);
+    event SignatureVerificationFailed(address recoveredAddress, address expectedAddress);
 
     modifier onlyProxy() {
         require(msg.sender == proxyAccount, "Only proxy can call this function");
@@ -76,21 +77,24 @@ contract WalletImp is Initializable, OwnableUpgradeable, IWalletImp {
     }
     // #endregion
 
-    function mintFromNFTViaRelayer(address nftContract, uint256 _nonce, uint256 salt, bytes memory _proxySignature) external override onlyRelayer{
+    function mintFromNFTViaRelayer(address nftContract, string memory secretMessage, uint256 _nonce, uint256 salt, bytes memory _proxySignature) external override onlyRelayer{
         require(nftContract != address(0), "invalid nft contract");
         require(_nonce == nonce, "Invalid nonce");
         // Construct the message to be signed by the owner
-        bytes32 messageHash = keccak256(abi.encodePacked("mintFromNFTViaRelayer",nftContract,_nonce, salt));
+        bytes32 messageHash = keccak256(abi.encodePacked("mintFromNFTViaRelayer",nftContract,secretMessage,_nonce,salt));
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(messageHash);
         address recoveredAddress = ECDSA.recover(ethSignedMessageHash, _proxySignature);
-        require(recoveredAddress == proxyAccount, "Invalid signature");
-        INFTMintable(nftContract).mintNFT(address(this));
+        if (recoveredAddress != proxyAccount) {
+            emit SignatureVerificationFailed(recoveredAddress, proxyAccount);
+            revert("Invalid signature");
+        }
+        INFTMintable(nftContract).mintWish(secretMessage);
         nonce++;
     }
-
-    function mintFromNFT(address nftContract) external override onlyOwner{
+    
+    function mintFromNFT(address nftContract,string memory secretMessage ) external override onlyOwner{
         require(nftContract != address(0), "invalid nft contract");
-        INFTMintable(nftContract).mintNFT(msg.sender);
+        INFTMintable(nftContract).mintWish(secretMessage);
     }
 
     // #region Reward Management
